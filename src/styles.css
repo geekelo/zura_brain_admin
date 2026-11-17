@@ -228,8 +228,7 @@ tbody tr { cursor: pointer; }
 
 .span-all { grid-column: 1 / -1; }
 .therapist-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
-.therapist-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem 0.85rem; }
-.therapist-list li > span { white-space: nowrap; }
+.therapist-list li { display: grid; justify-items: start; gap: 0.1rem; }
 .therapist-name { font-weight: 600; }
 .comments { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55rem; }
 .comments li { display: flex; flex-wrap: wrap; gap: 0.35rem 0.6rem; align-items: baseline; }
