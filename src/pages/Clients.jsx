@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, getAdminCode } from "../api";
+import AdminNoteForm from "../components/AdminNoteForm";
 import ClientSessions from "../components/ClientSessions";
-import { formatCycleLength, formatDate } from "../format";
+import { NoteItems } from "../components/SessionCard";
+import { formatCycleLength } from "../format";
 
 const emptyForm = {
   name: "",
@@ -28,6 +31,12 @@ export default function Clients() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [editing, setEditing] = useState(false);
+  const [preferences, setPreferences] = useState("");
+  const { phone: phoneParam = "" } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const nameQuery = searchParams.get("name") || "";
+  const phoneQuery = searchParams.get("phone") || "";
 
   async function load(term = search) {
     const query = term.trim() ? `?search=${encodeURIComponent(term.trim())}` : "";
@@ -37,8 +46,25 @@ export default function Clients() {
   }
 
   useEffect(() => {
-    load("").catch((err) => setError(err.message));
-  }, []);
+    let cancelled = false;
+    const phone = phoneQuery || (phoneParam ? decodeURIComponent(phoneParam) : "");
+    load("").then((rows) => {
+      if (cancelled || (!phone && !nameQuery)) return;
+      const match = phone
+        ? rows.find((client) => samePhone(client.phone, phone))
+        : rows.find((client) => client.name === nameQuery);
+      if (match) choose(match, { keepNotice: true });
+      else {
+        setSelected(null);
+        setError("Client not found.");
+      }
+    }).catch((err) => {
+      if (!cancelled) setError(err.message);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [phoneParam, phoneQuery, nameQuery]);
 
   useEffect(() => {
     if (!selected?.phone) return undefined;
@@ -51,13 +77,8 @@ export default function Clients() {
     ])
       .then(([sessionRows, noteRows]) => {
         if (cancelled) return;
-        const clientId = sessionRows.find((row) => row.client_id != null)?.client_id;
         setSessions(sessionRows);
-        setNotes(
-          (Array.isArray(noteRows) ? noteRows : []).filter(
-            (note) => clientId != null && note.client_id === clientId
-          )
-        );
+        setNotes(Array.isArray(noteRows) ? noteRows : []);
       })
       .catch((err) => {
         if (!cancelled) setError(err.message);
@@ -69,6 +90,10 @@ export default function Clients() {
       cancelled = true;
     };
   }, [selected?.phone, reloadKey]);
+
+  useEffect(() => {
+    setPreferences(selected?.client_preferences || "");
+  }, [selected?.phone, selected?.client_preferences]);
 
   function choose(client, { keepNotice = false } = {}) {
     setSelected(client);
@@ -131,6 +156,25 @@ export default function Clients() {
     }
   }
 
+  async function savePreferences(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const updated = await api("/admin/clients/preferences", {
+        method: "PATCH",
+        body: { phone: selected.phone, client_preferences: preferences }
+      });
+      setSelected((current) => ({ ...current, ...updated }));
+      setNotice("Preferences saved.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function refreshAfterSessionEdit() {
     const rows = await load();
     setSelected((current) => rows.find((client) => client.phone === current?.phone) || current);
@@ -146,7 +190,7 @@ export default function Clients() {
     return (
       <section className="detail">
         <header className="page-head">
-          <button type="button" className="ghost" onClick={() => setSelected(null)}>Back to clients</button>
+          <button type="button" className="ghost" onClick={() => { setSelected(null); navigate("/clients"); }}>Back to clients</button>
           <h1>{selected.name || "Client"}</h1>
           <p>{selected.phone}</p>
         </header>
@@ -246,32 +290,26 @@ export default function Clients() {
 
         <section className="panel">
           <h2>Preferences</h2>
-          <p className={selected.client_preferences ? "preserve" : "muted"}>
-            {selected.client_preferences || "No preferences yet."}
-          </p>
+          <form onSubmit={savePreferences}>
+            <label>
+              Preferences
+              <textarea value={preferences} onChange={(event) => setPreferences(event.target.value)} />
+            </label>
+            <button type="submit" disabled={busy}>{busy ? "Saving…" : "Save preferences"}</button>
+          </form>
         </section>
 
         <section className="panel">
           <h2>Admin notes</h2>
           {loadingDetail && notes.length === 0 ? <p className="muted">Loading notes…</p> : null}
-          {!loadingDetail && notes.length === 0 ? <p className="muted">No admin notes.</p> : null}
-          <div className="note-list">
-            {notes.map((note, index) => (
-              <article key={`${note.created_at || "note"}-${index}`} className="note">
-                <div className="section-head">
-                  <span>{formatDate(note.created_at)}</span>
-                  {note.status ? <span className="pill">{note.status}</span> : null}
-                </div>
-                <p className="preserve">{note.body || "—"}</p>
-              </article>
-            ))}
-          </div>
+          <NoteItems notes={notes.filter((note) => note.client_phone === selected.phone || (note.client_id != null && sessions.some((row) => row.client_id === note.client_id)))} onChange={refreshAfterSessionEdit} />
+          <AdminNoteForm target={{ phone: selected.phone }} onCreated={refreshAfterSessionEdit} />
         </section>
 
         <section>
           <h2>Sessions</h2>
           {loadingDetail && sessions.length === 0 ? <p className="muted">Loading sessions…</p> : (
-            <ClientSessions sessions={sessions} onUpdated={refreshAfterSessionEdit} />
+            <ClientSessions sessions={sessions} notes={notes} onUpdated={refreshAfterSessionEdit} />
           )}
         </section>
       </section>
@@ -316,7 +354,7 @@ export default function Clients() {
           </thead>
           <tbody>
             {clients.map((client) => (
-              <tr key={client.phone} onClick={() => choose(client)}>
+              <tr key={client.phone} onClick={() => navigate(`/clients/${encodeURIComponent(client.phone)}`)}>
                 <td data-label="Name">{client.name}</td>
                 <td data-label="Phone">{client.phone}</td>
                 <td data-label="Cycle">{client.cycle ?? "—"}</td>
@@ -333,6 +371,11 @@ export default function Clients() {
       </div>
     </section>
   );
+}
+
+function samePhone(left, right) {
+  const digits = (value) => String(value || "").replace(/\D/g, "");
+  return left === right || (digits(left) && digits(left) === digits(right));
 }
 
 function formFromClient(client) {

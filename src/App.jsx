@@ -5,6 +5,8 @@ import Login from "./pages/Login";
 import Overview from "./pages/Overview";
 import Clients from "./pages/Clients";
 import Sessions from "./pages/Sessions";
+import Comments from "./pages/Comments";
+import AdminNotes from "./pages/AdminNotes";
 import Therapists from "./pages/Therapists";
 import Account from "./pages/Account";
 
@@ -20,8 +22,13 @@ export default function App() {
       <Route element={<RequireAdmin />}>
         <Route index element={<Overview />} />
         <Route path="clients" element={<Clients />} />
+        <Route path="clients/:phone" element={<Clients />} />
         <Route path="sessions" element={<Sessions />} />
+        <Route path="sessions/:code" element={<Sessions />} />
+        <Route path="comments" element={<Comments />} />
+        <Route path="notes" element={<AdminNotes />} />
         <Route path="therapists" element={<Therapists />} />
+        <Route path="therapists/:code" element={<Therapists />} />
         <Route path="accounts/:account" element={<Account />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

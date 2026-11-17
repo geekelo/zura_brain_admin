@@ -6,6 +6,8 @@ const links = [
   ["/", "Overview"],
   ["/clients", "Clients"],
   ["/sessions", "Sessions"],
+  ["/comments", "Comments"],
+  ["/notes", "Admin notes"],
   ["/therapists", "Therapists"]
 ];
 
@@ -14,7 +16,9 @@ const accounts = [
   ["/accounts/tech", "Tech account"],
   ["/accounts/main", "Main account"],
   ["/accounts/lunez", "Lunez account"],
-  ["/accounts/stake", "Stake account"]
+  ["/accounts/stake", "Stake account"],
+  ["/accounts/sanction", "Sanction account"],
+  ["/accounts/client-support", "Client support account"]
 ];
 
 export default function Layout() {

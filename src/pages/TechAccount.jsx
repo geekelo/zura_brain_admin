@@ -23,6 +23,12 @@ export default function TechAccount() {
   const [year, setYear] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [entryType, setEntryType] = useState("payin");
 
   useEffect(() => {
     load("", "").catch((err) => setError(err.message));
@@ -50,6 +56,74 @@ export default function TechAccount() {
   const payouts = detail?.payouts || [];
   const summaries = detail?.summaries || [];
   const totals = detail?.totals || {};
+
+  function resetForm() {
+    setDescription("");
+    setAmount("");
+    setEntryType("payin");
+  }
+
+  function openAdd() {
+    setEditing(null);
+    resetForm();
+    setAdding(true);
+  }
+
+  function openUpdate(entry) {
+    setAdding(false);
+    setEditing(entry);
+    setDescription(entry.description || "");
+    setAmount(entry.amount ?? "");
+    setEntryType(entry.type || "payin");
+  }
+
+  function closeForm() {
+    setAdding(false);
+    setEditing(null);
+    resetForm();
+  }
+
+  async function saveEntry(event) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    const body = {
+      tech_payin_payout: {
+        description,
+        amount: Number(amount),
+        type: entryType
+      }
+    };
+    try {
+      if (editing) {
+        await api(`/admin/tech_payins_payouts/${editing.id}`, { method: "PATCH", body });
+        setNotice("Tech account entry updated.");
+      } else {
+        await api("/admin/tech_payins_payouts", { method: "POST", body });
+        setNotice("Tech account entry created.");
+      }
+      closeForm();
+      await load(month, year);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function deleteEntry(entry) {
+    if (entry.id == null) return;
+    const label = entry.description || "this entry";
+    if (!window.confirm(`Delete ${label}?`)) return;
+    setError("");
+    setNotice("");
+    try {
+      await api(`/admin/tech_payins_payouts/${entry.id}`, { method: "DELETE" });
+      if (editing?.id === entry.id) closeForm();
+      setNotice("Tech account entry deleted.");
+      await load(month, year);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
 
   return (
     <section>
@@ -90,6 +164,7 @@ export default function TechAccount() {
         </button>
       </form>
       {error ? <p className="error">{error}</p> : null}
+      {notice ? <p className="notice">{notice}</p> : null}
       {loading && !detail ? <p className="muted">Loading tech account…</p> : null}
       {detail ? (
         <>
@@ -103,13 +178,42 @@ export default function TechAccount() {
               <strong>{formatAmount(totals.payouts)}</strong>
             </article>
           </div>
+          {adding || editing ? (
+            <form className="panel" onSubmit={saveEntry}>
+              <div className="section-head">
+                <h2>{editing ? "Update tech account" : "Add tech account"}</h2>
+                <button type="button" className="ghost" onClick={closeForm}>Close</button>
+              </div>
+              <label>
+                Description
+                <input value={description} onChange={(event) => setDescription(event.target.value)} required />
+              </label>
+              <label>
+                Amount
+                <input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} required />
+              </label>
+              <label>
+                Type
+                <select value={entryType} onChange={(event) => setEntryType(event.target.value)}>
+                  <option value="payin">Payin</option>
+                  <option value="payout">Payout</option>
+                </select>
+              </label>
+              <div className="form-actions">
+                <button type="submit">{editing ? "Update" : "Create"}</button>
+                <button type="button" className="ghost" onClick={closeForm}>Close</button>
+              </div>
+            </form>
+          ) : (
+            <button type="button" onClick={openAdd}>Add</button>
+          )}
           <section className="panel">
             <h2>Payins</h2>
-            <EntryTable entries={payins} empty="No payins." />
+            <EntryTable entries={payins} empty="No payins." onUpdate={openUpdate} onDelete={deleteEntry} />
           </section>
           <section className="panel">
             <h2>Payouts</h2>
-            <EntryTable entries={payouts} empty="No payouts." />
+            <EntryTable entries={payouts} empty="No payouts." onUpdate={openUpdate} onDelete={deleteEntry} />
           </section>
           <section className="panel">
             <h2>Monthly summaries</h2>
@@ -146,7 +250,11 @@ export default function TechAccount() {
   );
 }
 
-function EntryTable({ entries, empty }) {
+function linkedPayin(entry) {
+  return String(entry.type).toLowerCase() === "payin" && Boolean(entry.session_code || entry.therapist_name);
+}
+
+function EntryTable({ entries, empty, onUpdate, onDelete }) {
   if (!entries.length) return <p className="muted">{empty}</p>;
   return (
     <div className="table-wrap">
@@ -158,16 +266,25 @@ function EntryTable({ entries, empty }) {
             <th>Description</th>
             <th>Session</th>
             <th>Therapist</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {entries.map((entry, index) => (
-            <tr key={`${entry.created_at}-${entry.session_code}-${index}`}>
+            <tr key={entry.id || `${entry.created_at}-${entry.session_code}-${index}`}>
               <td data-label="Date">{formatDate(entry.created_at)}</td>
               <td data-label="Amount">{formatAmount(entry.amount)}</td>
               <td data-label="Description">{entry.description || "—"}</td>
               <td data-label="Session">{entry.session_code || "—"}</td>
               <td data-label="Therapist">{entry.therapist_name || "—"}</td>
+              <td className="actions" data-label="Actions">
+                {entry.id == null || linkedPayin(entry) ? null : (
+                  <>
+                    <button type="button" className="ghost" onClick={() => onUpdate(entry)}>Update</button>
+                    <button type="button" className="ghost" onClick={() => onDelete(entry)}>Delete</button>
+                  </>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

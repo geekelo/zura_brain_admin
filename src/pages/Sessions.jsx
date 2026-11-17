@@ -1,134 +1,116 @@
 import { useEffect, useState } from "react";
-import { api, getAdminCode } from "../api";
-import { formatCycleLength } from "../format";
-import TherapistList from "../components/TherapistList";
+import { useNavigate, useParams } from "react-router-dom";
+import { api } from "../api";
+import SessionCard from "../components/SessionCard";
 
 export default function Sessions() {
+  const { code } = useParams();
+  const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [sessions, setSessions] = useState([]);
+  const [notes, setNotes] = useState([]);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [busyCode, setBusyCode] = useState("");
+  const [loading, setLoading] = useState(true);
 
   async function load(nextPhone = phone) {
     const query = nextPhone.trim() ? `?phone=${encodeURIComponent(nextPhone.trim())}` : "";
-    setSessions(await api(`/admin/sessions${query}`));
+    const [sessionRows, noteRows] = await Promise.all([
+      api(`/admin/sessions${query}`),
+      api("/admin/admin_notes").catch(() => [])
+    ]);
+    setSessions(sessionRows);
+    setNotes(Array.isArray(noteRows) ? noteRows : []);
+    return sessionRows;
   }
 
   useEffect(() => {
-    load("").catch((err) => setError(err.message));
-  }, []);
+    let cancelled = false;
+    setLoading(true);
+    const request = code
+      ? api(`/admin/sessions/${encodeURIComponent(code)}`).then((session) => [session]).catch(async () => {
+        const rows = await api("/admin/sessions");
+        const match = rows.find((row) => row.session_code === code);
+        if (!match) throw new Error("Session not found.");
+        return [match];
+      })
+      : load(phone);
+    Promise.all([
+      request,
+      api("/admin/admin_notes").catch(() => [])
+    ]).then(([sessionRows, noteRows]) => {
+      if (cancelled) return;
+      setSessions(sessionRows);
+      setNotes(Array.isArray(noteRows) ? noteRows : []);
+      setError("");
+    }).catch((err) => {
+      if (!cancelled) setError(err.message);
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [code]);
 
-  async function setStatus(session, status) {
-    setBusyCode(`${session.session_code}-${status}`);
-    setError("");
-    setNotice("");
-    try {
-      await api(`/admin/sessions/${session.session_code}/status`, {
-        method: "PATCH",
-        body: { tc: getAdminCode(), status }
-      });
-      setNotice(`${session.session_code} marked ${status}.`);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyCode("");
+  async function refresh() {
+    if (code) {
+      const session = await api(`/admin/sessions/${encodeURIComponent(code)}`);
+      setSessions([session]);
+      setNotes(await api("/admin/admin_notes").catch(() => []));
+      return;
     }
+    await load(phone);
   }
 
-  async function verifyPayment(session) {
-    setBusyCode(`${session.session_code}-verify`);
-    setError("");
-    setNotice("");
-    try {
-      await api(`/admin/sessions/${session.session_code}/verify_payment`, {
-        method: "PATCH",
-        body: { tc: getAdminCode() }
-      });
-      setNotice(`Payment verified for ${session.session_code}.`);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyCode("");
-    }
-  }
+  const visible = code ? sessions.filter((session) => session.session_code === code) : sessions;
 
   return (
     <section>
       <header className="page-head">
-        <h1>Sessions</h1>
-        <p>Completed and disputed can only be set with the admin code.</p>
+        {code ? (
+          <button type="button" className="ghost" onClick={() => navigate("/sessions")}>Back to sessions</button>
+        ) : null}
+        <h1>{code ? `Session ${code}` : "Sessions"}</h1>
+        <p>Verify each payment, resolve comments, and tip the therapists on the session.</p>
       </header>
-      <form
-        className="toolbar"
-        onSubmit={(event) => {
-          event.preventDefault();
-          load().catch((err) => setError(err.message));
-        }}
-      >
-        <input
-          placeholder="Client phone"
-          value={phone}
-          onChange={(event) => setPhone(event.target.value)}
-        />
-        <button type="submit">Show client</button>
-        <button
-          type="button"
-          className="ghost"
-          onClick={() => {
-            setPhone("");
-            load("").catch((err) => setError(err.message));
+      {code ? null : (
+        <form
+          className="toolbar"
+          onSubmit={(event) => {
+            event.preventDefault();
+            load().catch((err) => setError(err.message));
           }}
         >
-          All sessions
-        </button>
-      </form>
+          <input
+            placeholder="Client phone"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+          />
+          <button type="submit">Show client</button>
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => {
+              setPhone("");
+              load("").catch((err) => setError(err.message));
+            }}
+          >
+            All sessions
+          </button>
+        </form>
+      )}
       {error ? <p className="error">{error}</p> : null}
-      {notice ? <p className="notice">{notice}</p> : null}
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Code</th>
-              <th>Client</th>
-              <th>Cycle</th>
-              <th>Cycle length</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Therapists</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sessions.map((session) => (
-              <tr key={session.session_code}>
-                <td data-label="Code">{session.session_code}</td>
-                <td data-label="Client">
-                  {session.client?.name}
-                  <span className="sub">{session.client?.phone}</span>
-                </td>
-                <td data-label="Cycle">{session.cycle ?? "—"}</td>
-                <td data-label="Cycle length">{formatCycleLength(session.cycle_length)}</td>
-                <td data-label="Amount">{session.amount}</td>
-                <td data-label="Status"><span className={`pill ${session.status}`}>{session.status}</span></td>
-                <td data-label="Therapists"><TherapistList therapists={session.session_therapists || []} /></td>
-                <td className="actions" data-label="Actions">
-                  <button type="button" disabled={busyCode === `${session.session_code}-completed`} onClick={() => setStatus(session, "completed")}>
-                    Complete
-                  </button>
-                  <button type="button" className="warn" disabled={busyCode === `${session.session_code}-disputed`} onClick={() => setStatus(session, "disputed")}>
-                    Dispute
-                  </button>
-                  <button type="button" className="ghost" disabled={busyCode === `${session.session_code}-verify`} onClick={() => verifyPayment(session)}>
-                    Verify payment
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {loading && !visible.length ? <p className="muted">Loading sessions…</p> : null}
+      <div className="stack wide">
+        {visible.map((session) => (
+          <SessionCard
+            key={session.session_code}
+            session={session}
+            notes={notes.filter((note) => note.session_code === session.session_code)}
+            onChange={refresh}
+            linked={!code}
+          />
+        ))}
       </div>
     </section>
   );

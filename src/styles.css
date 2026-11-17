@@ -80,6 +80,11 @@ aside {
 .brand-sub { margin: -0.8rem 0 0; color: #c8b89a; }
 
 aside nav { display: grid; gap: 0.35rem; }
+main a.record-link {
+  color: #1f4d3a;
+  font-weight: 650;
+}
+
 aside a {
   color: #f4efe6;
   text-decoration: none;
@@ -223,6 +228,7 @@ tbody tr { cursor: pointer; }
 .facts dd { margin: 0; }
 
 .note-list { display: grid; gap: 0.8rem; }
+.note-links { display: flex; flex-wrap: wrap; gap: 0.45rem 0.8rem; margin: 0.2rem 0; }
 .note { display: grid; gap: 0.35rem; border-top: 1px solid #efe7dc; padding-top: 0.75rem; }
 .note p { margin: 0; }
 
@@ -232,6 +238,24 @@ tbody tr { cursor: pointer; }
 .therapist-name { font-weight: 600; }
 .comments { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55rem; }
 .comments li { display: flex; flex-wrap: wrap; gap: 0.35rem 0.6rem; align-items: baseline; }
+.tip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.8rem;
+  align-items: center;
+  margin-bottom: 0.7rem;
+}
+.tip-row form { display: flex; gap: 0.4rem; align-items: center; }
+.tip-row input { width: 7rem; }
+textarea { min-height: 5rem; resize: vertical; }
+.payments { display: grid; gap: 0.9rem; }
+.payment { display: grid; gap: 0.55rem; border-top: 1px solid #efe7dc; padding-top: 0.75rem; }
+.payment-meta { display: flex; flex-wrap: wrap; gap: 0.55rem 0.8rem; align-items: end; }
+.payment-meta label { min-width: 9rem; }
+.payment-meta select { max-width: 12rem; }
+.receipts { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.receipts figure { margin: 0; display: grid; gap: 0.35rem; justify-items: start; }
+.receipts img { width: 140px; height: 140px; object-fit: cover; border-radius: 12px; background: #efe7dc; }
 .session-edit { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; }
 .session-edit label { flex: 1 1 180px; }
 .session-edit select { max-width: 240px; }
