@@ -1,6 +1,8 @@
 import { Navigate, useParams } from "react-router-dom";
 import ExtraAccount from "./ExtraAccount";
 import TechAccount from "./TechAccount";
+import MainAccount from "./MainAccount";
+import LunezAccount from "./LunezAccount";
 
 const accounts = {
   extra: "Extra account",
@@ -14,6 +16,8 @@ export default function Account() {
   const { account } = useParams();
   if (account === "extra") return <ExtraAccount />;
   if (account === "tech") return <TechAccount />;
+  if (account === "main") return <MainAccount />;
+  if (account === "lunez") return <LunezAccount />;
   const title = accounts[account];
   if (!title) return <Navigate to="/" replace />;
 
