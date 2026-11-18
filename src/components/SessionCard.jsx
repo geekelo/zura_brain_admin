@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, getAdminCode } from "../api";
 import { formatAmount, formatCycleLength, formatDate, formatRole, formatTime } from "../format";
 import { ClientLink, SessionLink, TherapistLink } from "./RecordLink";
@@ -24,11 +24,21 @@ export default function SessionCard({ session, notes = [], onChange, linked = tr
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [tips, setTips] = useState({});
+  const [preview, setPreview] = useState("");
   const code = session.session_code;
   const payments = session.payment_methods || [];
   const comments = Array.isArray(session.comments) ? session.comments : [];
   const therapists = session.session_therapists || [];
   const verified = Boolean(session.session_history?.payment_verified);
+
+  useEffect(() => {
+    if (!preview) return undefined;
+    function onKey(event) {
+      if (event.key === "Escape") setPreview("");
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [preview]);
   const statusOptions = STATUSES.some(([value]) => value === session.status)
     ? STATUSES
     : [[session.status, session.status], ...STATUSES];
@@ -175,9 +185,9 @@ export default function SessionCard({ session, notes = [], onChange, linked = tr
                     <div className="receipts">
                       {images.map((receipt) => (
                         <figure key={receipt.img}>
-                          <a href={receipt.img} target="_blank" rel="noreferrer">
+                          <button type="button" className="receipt-open" aria-label="Enlarge receipt" onClick={() => setPreview(receipt.img)}>
                             <img src={receipt.img} alt="Payment receipt" />
-                          </a>
+                          </button>
                           {receipt.del ? (
                             <a href={receipt.del} target="_blank" rel="noreferrer">Delete image</a>
                           ) : null}
@@ -260,6 +270,12 @@ export default function SessionCard({ session, notes = [], onChange, linked = tr
         </label>
         <span className="muted">{formatTime(session.start_time)} – {formatTime(session.end_time)}</span>
       </div>
+      {preview ? (
+        <div className="lightbox" role="dialog" aria-modal="true" aria-label="Enlarged receipt" onClick={() => setPreview("")}>
+          <button type="button" className="lightbox-close" onClick={() => setPreview("")}>Close</button>
+          <img src={preview} alt="Enlarged payment receipt" onClick={(event) => event.stopPropagation()} />
+        </div>
+      ) : null}
     </article>
   );
 }
