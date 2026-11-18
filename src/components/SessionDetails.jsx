@@ -14,7 +14,8 @@ const HISTORY_LABELS = {
   started: "Started",
   ended: "Ended",
   completed: "Completed",
-  payment_verified: "Payment verified"
+  payment_verified: "Payment verified",
+  tipped: "Tipped"
 };
 
 export default function SessionDetails({ session, showClient = false }) {
@@ -112,7 +113,7 @@ export default function SessionDetails({ session, showClient = false }) {
             {Object.entries(history).map(([key, value]) => (
               <div key={key}>
                 <dt>{HISTORY_LABELS[key] || key}</dt>
-                <dd>{typeof value === "boolean" ? formatYesNo(value) : String(value)}</dd>
+                <dd>{key === "tipped" ? Number(value) || 0 : typeof value === "boolean" ? formatYesNo(value) : String(value)}</dd>
               </div>
             ))}
           </dl>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, getAdminCode } from "../api";
-import { formatAmount, formatCycleLength, formatDate, formatRole, formatTime } from "../format";
+import { formatAmount, formatCycleLength, formatDate, formatRole, formatTime, formatYesNo } from "../format";
 import { ClientLink, SessionLink, TherapistLink } from "./RecordLink";
 import AdminNoteForm from "./AdminNoteForm";
 
@@ -29,7 +29,15 @@ export default function SessionCard({ session, notes = [], onChange, linked = tr
   const payments = session.payment_methods || [];
   const comments = Array.isArray(session.comments) ? session.comments : [];
   const therapists = session.session_therapists || [];
-  const verified = Boolean(session.session_history?.payment_verified);
+  const history = session.session_history || {};
+  const verified = Boolean(history.payment_verified);
+  const historyFlags = [
+    ["Pending", history.pending],
+    ["Started", history.started],
+    ["Ended", history.ended],
+    ["Payment verified", history.payment_verified],
+    ["Completed", history.completed]
+  ];
 
   useEffect(() => {
     if (!preview) return undefined;
@@ -141,6 +149,22 @@ export default function SessionCard({ session, notes = [], onChange, linked = tr
           <dd>{verified ? "Verified" : "Not verified"}</dd>
         </div>
       </dl>
+
+      <div className="session-block">
+        <h4>History</h4>
+        <dl className="facts">
+          {historyFlags.map(([name, value]) => (
+            <div key={name}>
+              <dt>{name}</dt>
+              <dd>{formatYesNo(Boolean(value))}</dd>
+            </div>
+          ))}
+          <div>
+            <dt>Tipped</dt>
+            <dd>{Number(history.tipped) || 0}</dd>
+          </div>
+        </dl>
+      </div>
 
       <div className="session-block">
         <h4>Payment methods</h4>
