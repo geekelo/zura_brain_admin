@@ -3,10 +3,19 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import SessionCard from "../components/SessionCard";
 
+const STATUSES = [
+  ["pending", "Pending"],
+  ["started", "Started"],
+  ["ended", "Ended"],
+  ["completed", "Completed"],
+  ["disputed", "Disputed"]
+];
+
 export default function Sessions() {
   const { code } = useParams();
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
+  const [status, setStatus] = useState("");
   const [sessions, setSessions] = useState([]);
   const [notes, setNotes] = useState([]);
   const [error, setError] = useState("");
@@ -62,7 +71,8 @@ export default function Sessions() {
     await load(phone);
   }
 
-  const visible = code ? sessions.filter((session) => session.session_code === code) : sessions;
+  const listed = code ? sessions.filter((session) => session.session_code === code) : sessions;
+  const visible = !code && status ? listed.filter((session) => session.status === status) : listed;
 
   return (
     <section>
@@ -86,12 +96,19 @@ export default function Sessions() {
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
           />
+          <select aria-label="Status" value={status} onChange={(event) => setStatus(event.target.value)}>
+            <option value="">All statuses</option>
+            {STATUSES.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
           <button type="submit">Show client</button>
           <button
             type="button"
             className="ghost"
             onClick={() => {
               setPhone("");
+              setStatus("");
               load("").catch((err) => setError(err.message));
             }}
           >
@@ -101,6 +118,7 @@ export default function Sessions() {
       )}
       {error ? <p className="error">{error}</p> : null}
       {loading && !visible.length ? <p className="muted">Loading sessions…</p> : null}
+      {!loading && !visible.length ? <p className="muted">{status ? "No sessions with that status." : "No sessions."}</p> : null}
       <div className="stack wide">
         {visible.map((session) => (
           <SessionCard
@@ -108,7 +126,12 @@ export default function Sessions() {
             session={session}
             notes={notes.filter((note) => note.session_code === session.session_code)}
             onChange={refresh}
+            onDeleted={() => {
+              if (code) navigate("/sessions");
+              else return refresh();
+            }}
             linked={!code}
+            defaultOpen={Boolean(code)}
           />
         ))}
       </div>

@@ -19,12 +19,13 @@ const PAYMENT_STATUSES = [
   ["nonrefunded", "Nonrefunded"]
 ];
 
-export default function SessionCard({ session, notes = [], onChange, linked = true }) {
+export default function SessionCard({ session, notes = [], onChange, onDeleted, linked = true, defaultOpen = false }) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [tips, setTips] = useState({});
   const [preview, setPreview] = useState("");
+  const [open, setOpen] = useState(defaultOpen);
   const code = session.session_code;
   const payments = session.payment_methods || [];
   const comments = Array.isArray(session.comments) ? session.comments : [];
@@ -112,15 +113,49 @@ export default function SessionCard({ session, notes = [], onChange, linked = tr
     }), `Tip saved for ${therapist.name}.`);
   }
 
+  function deleteSession() {
+    if (!window.confirm(`Delete session ${code}?`)) return;
+    setBusy("delete");
+    setError("");
+    setNotice("");
+    api(`/admin/sessions/${encodeURIComponent(code)}`, {
+      method: "DELETE",
+      body: { tc: getAdminCode() }
+    }).then(() => {
+      if (onDeleted) return onDeleted();
+      if (onChange) return onChange();
+      return null;
+    }).catch((err) => {
+      setError(err.message);
+    }).finally(() => {
+      setBusy("");
+    });
+  }
+
   return (
     <article className="panel session-card">
-      <div className="section-head">
+      <div className="session-summary">
+        <button
+          type="button"
+          className="accordion"
+          aria-expanded={open}
+          aria-label={`${open ? "Hide" : "Show"} details for session ${code}`}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span className={open ? "chevron open" : "chevron"} />
+        </button>
         <h3>{linked ? <SessionLink code={code} /> : code}</h3>
+        <ClientLink name={session.client?.name} phone={session.client?.phone} />
+        <span className="muted">{formatDate(session.session_date)}</span>
+        <span>{formatAmount(session.amount)}</span>
         <span className={`pill ${session.status}`}>{statusLabel(session.status)}</span>
+        <button type="button" className="ghost session-delete" disabled={busy === "delete"} onClick={deleteSession}>
+          Delete
+        </button>
       </div>
       {error ? <p className="error">{error}</p> : null}
       {notice ? <p className="notice">{notice}</p> : null}
-      <dl className="facts">
+      {open ? (<><dl className="facts">
         <div>
           <dt>Client</dt>
           <dd>
@@ -300,6 +335,7 @@ export default function SessionCard({ session, notes = [], onChange, linked = tr
           <img src={preview} alt="Enlarged payment receipt" onClick={(event) => event.stopPropagation()} />
         </div>
       ) : null}
+      </>) : null}
     </article>
   );
 }

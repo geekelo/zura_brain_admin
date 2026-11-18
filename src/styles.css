@@ -206,6 +206,30 @@ tbody tr { cursor: pointer; }
 .detail { display: grid; gap: 1rem; }
 .detail .page-head { display: grid; gap: 0.35rem; }
 .section-head { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+.session-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem 0.85rem; }
+.session-summary h3 { margin: 0; }
+button.accordion {
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #1c1915;
+  border: 1px solid #d9d0c3;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.chevron {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  transform: rotate(45deg);
+  margin-left: -0.12rem;
+}
+.chevron.open { transform: rotate(135deg); margin-left: 0; margin-top: -0.12rem; }
+button.session-delete { margin-left: auto; }
 .edit-form { display: grid; gap: 0.75rem; border-top: 1px solid #efe7dc; padding-top: 0.9rem; }
 .form-actions { display: flex; gap: 0.6rem; }
 .form-actions button { flex: 1; }
