@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Overview from "./pages/Overview";
 import Clients from "./pages/Clients";
 import Sessions from "./pages/Sessions";
+import Payments from "./pages/Payments";
 import Comments from "./pages/Comments";
 import AdminNotes from "./pages/AdminNotes";
 import Therapists from "./pages/Therapists";
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="clients/:phone" element={<Clients />} />
         <Route path="sessions" element={<Sessions />} />
         <Route path="sessions/:code" element={<Sessions />} />
+        <Route path="payments" element={<Payments />} />
         <Route path="comments" element={<Comments />} />
         <Route path="notes" element={<AdminNotes />} />
         <Route path="therapists" element={<Therapists />} />

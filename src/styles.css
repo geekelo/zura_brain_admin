@@ -130,6 +130,15 @@ main { padding: 1.75rem; }
 
 .cards strong { font-size: 1.8rem; }
 
+.refund-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.refund-bar p { margin: 0; font-weight: 600; }
 .toolbar, .split, .stack { display: flex; gap: 0.8rem; }
 .toolbar { align-items: center; margin-bottom: 1rem; }
 .toolbar input, .toolbar select { max-width: 280px; }
@@ -356,7 +365,8 @@ button.lightbox-close {
   h1 { font-size: 1.6rem; }
 
   .toolbar,
-  .split {
+  .split,
+  .refund-bar {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
   }
